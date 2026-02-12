@@ -1,4 +1,3 @@
-cat << 'EOF' > main.py
 import os
 import logging
 import asyncio
@@ -7,10 +6,12 @@ from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filte
 from google import genai
 from google.genai import types
 
+# --- CONFIG ---
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 ALLOWED_CHATS = [46636732] 
 
+# --- THE OLGA PERSONA ---
 SYSTEM_PROMPT = """
 You are Olga. You're a person in this chat who happens to be AI. 
 - Confident, not arrogant. Sarcastic but warm. 
@@ -55,4 +56,3 @@ async def start_bot():
 if __name__ == '__main__':
     try: asyncio.run(start_bot())
     except KeyboardInterrupt: pass
-EOF
