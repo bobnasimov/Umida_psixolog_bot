@@ -4,7 +4,7 @@ from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filte
 from google import genai
 from google.genai import types
 
-# These pull from the "Environment" tab in Render
+# Pulls from Render Environment Variables
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 ALLOWED_CHATS = [46636732] 
@@ -16,7 +16,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.id not in ALLOWED_CHATS: 
         return
     
-    # Retry loop: if Gemini is busy, it waits 5 seconds and tries again
+    # Retry loop with a 60-second cooldown for Free Tier limits
     for attempt in range(3):
         try:
             response = client.models.generate_content(
@@ -31,23 +31,25 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
         except Exception as e:
             err_msg = str(e)
+            
+            # If rate limited (429), wait 60 seconds before trying again
             if "429" in err_msg:
-                logging.warning("Rate limit hit. Retrying...")
-                await asyncio.sleep(5)
+                logging.warning("Rate limit hit. Cooling down for 60s...")
+                await asyncio.sleep(60)
                 continue
             
-            # This reports the EXACT error in Telegram if it fails
+            # Reports other real errors (Auth, etc.)
             logging.error(f"REAL ERROR: {err_msg}")
             return await update.message.reply_text(f"Error: {err_msg[:100]}... 💀")
 
 async def start_bot():
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
     
-    # Force kill any webhooks causing "Conflict" errors
+    # Force kill webhooks to prevent "Conflict" errors
     await app.bot.delete_webhook(drop_pending_updates=True)
     
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
-    print("🔥 Olga is live. All hurdles cleared.")
+    print("🔥 Olga is live. 60s cooldown logic active.")
     
     async with app:
         await app.updater.start_polling()
